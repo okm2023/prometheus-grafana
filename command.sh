@@ -3,10 +3,10 @@ docker run -d --name database \
   -e MYSQL_ROOT_PASSWORD=abc123 \
   -e MYSQL_DATABASE=openSIS \
   -e MYSQL_USER=openSIS_rw \
-  -e MYSQL_PASSWORD=Op3nS!S \
+  -e MYSQL_PASSWORD='Op3nS!S' \
   -v db_data:/var/lib/mysql \
-  -v $(pwd)/mysql-init:/docker-entrypoint-initdb.d \
-  -v $(pwd)/mysql-config/strict_mode.cnf:/etc/mysql/conf.d/strict_mode.cnf \
+  -v $(pwd)/openSIS-Classic/MYSQL/mysql-init:/docker-entrypoint-initdb.d \
+  -v $(pwd)/openSIS-Classic/MYSQL/mysql-config/strict_mode.cnf:/etc/mysql/conf.d/strict_mode.cnf \
   --network opensis_network \
   --network-alias opensis \
   mariadb:10.5
@@ -16,10 +16,10 @@ docker run -d --name database \
 
 docker run -d --name frontend \
   -p 8080:80 -p 80:80 \
-  --network opensis_network \
+  --network opensis-network\
   --network-alias opensis \
   --depends-on database \
-  your-frontend-image
+  opensis-ui
 
 
 docker network create opensis_network

@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  database:
+    image: mariadb:10.5
+    container_name: database
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: abc123
+      MYSQL_DATABASE: openSIS
+      MYSQL_USER: openSIS_rw
+      MYSQL_PASSWORD: Op3nS!S
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./openSIS-Classic/MYSQL/mysql-init:/docker-entrypoint-initdb.d
+      - ./openSIS-Classic/MYSQL/mysql-config/strict_mode.cnf:/etc/mysql/conf.d/strict_mode.cnf
+    networks:
+      - opensis_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    image: opensis-ui
+    container_name: frontend
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - opensis_network
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/etc/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+
+    networks:
+      - opensis_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=omar123
+    networks:
+      - opensis_network
+
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node_exporter
+    restart: always
+    ports:
+      - "9100:9100"
+    networks:
+      - opensis_network
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    networks:
+      - opensis_network
+
+networks:
+  opensis_network:
+    driver: bridge
+
+volumes:
+  db_data:
+  openSIS:
+  prometheus_data:
+  grafana_data:
